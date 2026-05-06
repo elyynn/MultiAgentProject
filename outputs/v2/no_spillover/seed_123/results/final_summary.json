@@ -1,0 +1,14 @@
+{
+  "num_epochs_run": 100,
+  "converged": false,
+  "convergence_epoch": null,
+  "final_average_ai_usage": 0.133,
+  "final_average_global_trust": 0.8263000000000027,
+  "final_average_offer": 1.125,
+  "final_detection_rate": 0.03,
+  "final_correct_match_rate": 0.679,
+  "final_overoffer_rate": 0.293,
+  "final_underoffer_rate": 0.028,
+  "final_average_candidate_loss": -1.09447,
+  "final_average_company_loss": 0.429
+}

@@ -1,0 +1,6 @@
+seed,num_epochs_run,converged,convergence_epoch,final_average_ai_usage,final_average_global_trust,final_average_offer,final_detection_rate,final_correct_match_rate,final_overoffer_rate,final_underoffer_rate,final_average_candidate_loss,final_average_company_loss
+7,100,False,,0.103,0.8094000000000026,1.127,0.026,0.721,0.258,0.021,-1.1025500000000001,0.368
+42,100,False,,0.134,0.8010000000000025,1.103,0.036,0.699,0.277,0.024,-1.06467,0.396
+123,100,False,,0.133,0.8263000000000027,1.125,0.03,0.679,0.293,0.028,-1.09447,0.429
+1337,100,False,,0.099,0.8143500000000028,1.105,0.013,0.639,0.303,0.058,-1.096,0.464
+2024,100,False,,0.079,0.7629000000000026,1.028,0.026,0.61,0.344,0.046,-1.0031999999999999,0.485
