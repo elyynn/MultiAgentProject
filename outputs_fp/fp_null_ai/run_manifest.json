@@ -1,0 +1,9 @@
+{
+  "arm": "fp_null_ai",
+  "timestamp": "2026-05-07T00:24:38.440243Z",
+  "num_fp_iterations": 2000,
+  "num_eval_samples": 100000,
+  "num_eval_seeds": 30,
+  "seed": 42,
+  "fixed_firm": null
+}

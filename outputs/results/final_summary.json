@@ -1,14 +1,14 @@
 {
-  "num_epochs_run": 100,
+  "num_epochs_run": 200,
   "converged": false,
   "convergence_epoch": null,
-  "final_average_ai_usage": 0.039,
-  "final_average_global_trust": 0.990150000000001,
-  "final_average_offer": 1.058,
-  "final_detection_rate": 0.006,
-  "final_correct_match_rate": 0.734,
-  "final_overoffer_rate": 0.237,
-  "final_underoffer_rate": 0.029,
-  "final_average_candidate_loss": -1.05726,
-  "final_average_company_loss": 0.307
+  "final_average_ai_usage": 0.0681,
+  "final_average_global_trust": 0.7839249999999999,
+  "final_average_offer": 1.0747,
+  "final_detection_rate": 0.0183,
+  "final_correct_match_rate": 0.7633,
+  "final_overoffer_rate": 0.2307,
+  "final_underoffer_rate": 0.006,
+  "final_average_candidate_loss": -1.057791,
+  "final_average_company_loss": 0.2882
 }
