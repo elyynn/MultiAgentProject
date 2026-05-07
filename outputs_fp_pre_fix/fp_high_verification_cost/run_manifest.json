@@ -1,0 +1,9 @@
+{
+  "arm": "fp_high_verification_cost",
+  "timestamp": "2026-05-07T00:28:42.472325Z",
+  "num_fp_iterations": 2000,
+  "num_eval_samples": 100000,
+  "num_eval_seeds": 30,
+  "seed": 42,
+  "fixed_firm": null
+}

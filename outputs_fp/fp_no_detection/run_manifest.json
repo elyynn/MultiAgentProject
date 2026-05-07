@@ -1,9 +1,84 @@
 {
   "arm": "fp_no_detection",
-  "timestamp": "2026-05-07T00:20:17.602243Z",
-  "num_fp_iterations": 2000,
-  "num_eval_samples": 100000,
-  "num_eval_seeds": 30,
-  "seed": 42,
-  "fixed_firm": null
+  "timestamp_utc": "2026-05-07T03:26:18.709981Z",
+  "config": {
+    "seed": 42,
+    "num_training_seeds": 5,
+    "num_fp_iterations": 750,
+    "fp_stability_window": 75,
+    "fp_stability_max_delta": 0.002,
+    "fp_regret_threshold": 0.01,
+    "mc_tie_tol_scale": 1.0,
+    "tie_break_prefer_lower": true,
+    "fixed_firm": null,
+    "types": [
+      0,
+      1,
+      2
+    ],
+    "type_prior": {
+      "0": 0.3,
+      "1": 0.5,
+      "2": 0.2
+    },
+    "candidate_actions": [
+      0,
+      1
+    ],
+    "firm_actions": [
+      "LowVerify",
+      "BaseVerify",
+      "HighVerify"
+    ],
+    "firm_ai_suspicion_levels": [
+      0.1,
+      0.5,
+      0.9
+    ],
+    "detection_multiplier": {
+      "LowVerify": 0.5,
+      "BaseVerify": 1.0,
+      "HighVerify": 2.0
+    },
+    "verification_cost": {
+      "LowVerify": 0.02,
+      "BaseVerify": 0.08,
+      "HighVerify": 0.2
+    },
+    "false_positive_rate": {
+      "LowVerify": 0.0,
+      "BaseVerify": 0.0,
+      "HighVerify": 0.0
+    },
+    "signal_sigma": 0.25,
+    "ai_signal_boost": {
+      "0": 0.7,
+      "1": 0.5,
+      "2": 0.2
+    },
+    "base_detection_prob": {
+      "0": 0.0,
+      "1": 0.0,
+      "2": 0.0
+    },
+    "offer_value": {
+      "0": 0.0,
+      "1": 1.0,
+      "2": 2.0
+    },
+    "ai_effort_benefit": {
+      "0": 0.1,
+      "1": 0.08,
+      "2": 0.05
+    },
+    "detection_penalty": 1.0,
+    "reputation_penalty_weight": 1.0,
+    "direct_reputation_penalty": 0.6,
+    "spillover_reputation_penalty": 0.3,
+    "expected_spillover_count": 2,
+    "num_payoff_samples": 2000,
+    "common_random_numbers": true,
+    "num_eval_samples": 100000,
+    "output_dir": "outputs_fp"
+  }
 }

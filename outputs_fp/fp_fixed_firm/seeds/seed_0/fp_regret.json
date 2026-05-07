@@ -1,0 +1,23 @@
+{
+  "regret": {
+    "r_max": 0.11599999999999999,
+    "r_firm": 0.11599999999999999,
+    "r_candidate_low": 0.0003736702127659572,
+    "r_candidate_medium": 0.00022938829787233495,
+    "r_candidate_high": 6.648936170217112e-05
+  },
+  "convergence": {
+    "is_strategy_stable": false,
+    "max_delta": 0.0013513463957373,
+    "flips_in_window": 2,
+    "br_flips_total": {
+      "candidate_low": 0,
+      "candidate_medium": 0,
+      "candidate_high": 2,
+      "firm": 0
+    }
+  },
+  "training_seed": 42,
+  "degenerate_posterior_train": 0,
+  "degenerate_posterior_eval": 0
+}

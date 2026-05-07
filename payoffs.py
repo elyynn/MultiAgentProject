@@ -1,17 +1,39 @@
 """
-Payoff computation for fictitious-play hiring game.
+Payoff computation for the FP-style hiring game.
 
-All hot-path functions are vectorised over Monte Carlo samples using numpy —
-no per-sample Python loops. The key function is _bayes_optimal_offer_batch,
-which computes all n offers in a single set of matrix operations.
+Joint firm action: (verification_level, ai_suspicion_idx).
+
+The firm's offer rule is Bayes-optimal under its *committed* ai_suspicion belief
+(P(a=1) = suspicion_p, uniform across types) — NOT under the real sigma_c. This is
+what makes the stage game stationary and the dynamics canonical FP-on-finite-actions.
+
+All hot paths are vectorised over Monte Carlo samples. The candidate and firm utility
+functions accept optional pre-drawn noise (`shared_noise=...`) so that callers can
+reuse the same standard-normal / uniform shocks across compared actions (paired CRN
+within an iteration), which materially reduces the variance of the argmax decision.
 """
+
+from __future__ import annotations
 
 import numpy as np
 from scipy.stats import norm
 
 
+# Module-level counter for degenerate posterior events (M10-FP).
+DEGENERATE_POSTERIOR_COUNT: int = 0
+
+
+def _reset_degenerate_counter():
+    global DEGENERATE_POSTERIOR_COUNT
+    DEGENERATE_POSTERIOR_COUNT = 0
+
+
+def get_degenerate_posterior_count() -> int:
+    return DEGENERATE_POSTERIOR_COUNT
+
+
 # ---------------------------------------------------------------------------
-# Scalar helpers (kept for diagnostics / evaluate_fp single-sample calls)
+# Scalar helpers (kept for diagnostics)
 # ---------------------------------------------------------------------------
 
 def signal_density(s, theta, action, cfg):
@@ -25,48 +47,9 @@ def detection_probability(theta, action, firm_policy, cfg):
     return min(1.0, cfg.detection_multiplier[firm_policy] * cfg.base_detection_prob[theta])
 
 
-def posterior_type_action(s, d, firm_policy, sigma_c, cfg):
-    """Scalar posterior — used only in evaluate_fp diagnostics."""
-    sigma_c_arr = _to_arr(sigma_c, cfg)
-    joint = {}
-    for i, theta in enumerate(cfg.types):
-        prior = cfg.type_prior[theta]
-        for j, a in enumerate(cfg.candidate_actions):
-            mu = theta + (cfg.ai_signal_boost[theta] if a == 1 else 0.0)
-            f_s = norm.pdf(s, loc=mu, scale=cfg.signal_sigma)
-            p_d = detection_probability(theta, a, firm_policy, cfg)
-            p_d_obs = p_d if d == 1 else (1.0 - p_d)
-            joint[(theta, a)] = prior * sigma_c_arr[i, j] * f_s * p_d_obs
-    total = sum(joint.values())
-    if total < 1e-300:
-        n = len(joint)
-        return {k: 1.0 / n for k in joint}
-    return {k: v / total for k, v in joint.items()}
-
-
-def bayes_optimal_offer(s, d, firm_policy, sigma_c, cfg):
-    """Scalar offer — wraps the batch version for single samples."""
-    sigma_c_arr = _to_arr(sigma_c, cfg)
-    offers = _bayes_optimal_offer_batch(
-        np.array([s]), np.array([d], dtype=int),
-        firm_policy, sigma_c_arr, cfg
-    )
-    return int(offers[0])
-
-
 # ---------------------------------------------------------------------------
 # Vectorised core
 # ---------------------------------------------------------------------------
-
-def _to_arr(sigma_c, cfg):
-    """Convert sigma_c dict or array to ndarray shape (3, 2)."""
-    if isinstance(sigma_c, np.ndarray):
-        return sigma_c
-    return np.array([
-        [sigma_c[(theta, a)] for a in cfg.candidate_actions]
-        for theta in cfg.types
-    ])
-
 
 def _precompute_mu(cfg):
     """mu[theta_idx, action_idx] — shape (3, 2)."""
@@ -85,91 +68,129 @@ def _precompute_p_det(firm_policy, cfg):
     ])
 
 
-def _bayes_optimal_offer_batch(s_batch, d_batch, firm_policy, sigma_c_arr, cfg,
-                                mu_arr=None, p_det_arr=None):
+def _belief_under_suspicion(suspicion_p: float, cfg) -> np.ndarray:
     """
-    Vectorised Bayes-optimal offer for a batch of (s, d) pairs.
-
-    All n offers are computed in parallel via numpy broadcasting — no Python loop
-    over samples.
-
-    s_batch:      (n,) signal observations
-    d_batch:      (n,) detection outcomes in {0, 1}
-    sigma_c_arr:  (3, 2) empirical candidate strategy, row-normalised
-    Returns:      (n,) int offers in {0, 1, 2}
+    P(a | theta) under the firm's committed suspicion. Uniform across types.
+    Returns shape (num_types, num_actions).
     """
+    n_t = len(cfg.types)
+    n_a = len(cfg.candidate_actions)
+    if n_a != 2:
+        raise ValueError(f"Expected binary candidate actions, got {n_a}")
+    belief = np.empty((n_t, n_a))
+    belief[:, 0] = 1.0 - suspicion_p
+    belief[:, 1] = suspicion_p
+    return belief
+
+
+def _bayes_optimal_offer_under_belief(s_batch, d_batch, verification, suspicion_p, cfg,
+                                       mu_arr=None, p_det_arr=None):
+    """
+    Vectorised offer rule under the firm's committed belief.
+
+    The firm's posterior over (theta, a) uses prior(theta) * P(a|theta; suspicion_p) —
+    NOT the empirical sigma_c. The stage game is therefore stationary across FP iterations.
+
+    Returns: (n,) int offers in {0, 1, 2}
+    """
+    global DEGENERATE_POSTERIOR_COUNT
+
     if mu_arr is None:
         mu_arr = _precompute_mu(cfg)
     if p_det_arr is None:
-        p_det_arr = _precompute_p_det(firm_policy, cfg)
+        p_det_arr = _precompute_p_det(verification, cfg)
 
     prior = np.array([cfg.type_prior[t] for t in cfg.types])  # (3,)
     thetas_arr = np.array(cfg.types, dtype=float)              # (3,)
+    belief = _belief_under_suspicion(suspicion_p, cfg)          # (3, 2)
 
-    # f_s: (n, 3, 2) — normal pdf under each (theta, action)
+    # f_s: (n, 3, 2)
     f_s = norm.pdf(
-        s_batch[:, None, None],       # (n, 1, 1)
-        loc=mu_arr[None, :, :],       # (1, 3, 2)
+        s_batch[:, None, None],
+        loc=mu_arr[None, :, :],
         scale=cfg.signal_sigma,
     )
 
-    # p_d_obs: (n, 3, 2) — likelihood of observed d under each (theta, action)
+    # p_d_obs: (n, 3, 2)
     p_d_obs = np.where(
         d_batch[:, None, None] == 1,
         p_det_arr[None, :, :],
         1.0 - p_det_arr[None, :, :],
     )
 
-    # joint: (n, 3, 2) — unnormalised posterior weight
-    joint = prior[None, :, None] * sigma_c_arr[None, :, :] * f_s * p_d_obs
+    # joint(theta, a | s, d) ∝ prior(theta) * belief(a|theta) * f(s|theta,a) * p(d|theta,a)
+    joint = prior[None, :, None] * belief[None, :, :] * f_s * p_d_obs  # (n, 3, 2)
 
-    # normalise to get posterior P(theta, a | s, d)
-    total = joint.sum(axis=(1, 2), keepdims=True)   # (n, 1, 1)
-    total = np.where(total < 1e-300, 1.0, total)
-    posterior = joint / total                        # (n, 3, 2)
+    total = joint.sum(axis=(1, 2), keepdims=True)
+    degen_mask = total < 1e-300
+    if np.any(degen_mask):
+        DEGENERATE_POSTERIOR_COUNT += int(degen_mask.sum())
+    total = np.where(degen_mask, 1.0, total)
+    posterior = joint / total                                   # (n, 3, 2)
 
     # marginal P(theta | s, d): (n, 3)
     p_theta = posterior.sum(axis=2)
 
-    # E[(o - theta)^2] for each offer o in {0, 1, 2}: result shape (n, 3)
+    # E[(o - theta)^2] for offers in {0,1,2}: (n, 3 offers)
     offers_range = np.array([0.0, 1.0, 2.0])
-    # (n, 3 types, 1 offer) * squared diff -> sum over types -> (n, 3 offers)
     loss = (
         p_theta[:, :, None]
         * (offers_range[None, None, :] - thetas_arr[None, :, None]) ** 2
     ).sum(axis=1)
 
-    return loss.argmin(axis=1).astype(int)  # (n,)
+    return loss.argmin(axis=1).astype(int)
+
+
+def bayes_optimal_offer(s, d, verification, suspicion_p, cfg):
+    """Scalar wrapper, used only by evaluate_fp diagnostics."""
+    offers = _bayes_optimal_offer_under_belief(
+        np.array([s], dtype=float), np.array([d], dtype=int),
+        verification, suspicion_p, cfg,
+    )
+    return int(offers[0])
 
 
 # ---------------------------------------------------------------------------
-# Expected utilities — vectorised, no per-sample loops
+# Expected utilities — accept optional shared noise for paired CRN
 # ---------------------------------------------------------------------------
 
-def candidate_expected_utility(theta, action, firm_policy, sigma_c, cfg, rng=None):
+def _draw_candidate_noise(rng, n: int):
+    """Pre-draw paired (Z, U_d) for use across compared candidate actions."""
+    return rng.standard_normal(n), rng.uniform(size=n)
+
+
+def candidate_expected_utility(theta, action, verification, suspicion_idx, cfg,
+                               rng=None, shared_noise=None):
     """
-    E[U_C(theta, action, firm_policy)] via vectorised Monte Carlo.
+    E[U_C(theta, action, (verification, suspicion_idx))] via vectorised MC.
 
-    U_C = E[V(o*(s,d,m))] + E_theta*a - P(det|theta,a,m)*(lambda_D + lambda_R*R_m)
+    `shared_noise`: optional (Z, U_d) tuple with shape (n,). If provided, signals are
+    `mu + sigma * Z` and detection outcomes are `U_d < p_det`. Reusing the same shocks
+    across `action` values (paired sampling) reduces argmax variance — see audit I3-FP.
     """
     if rng is None:
         rng = np.random.default_rng(0)
 
-    sigma_c_arr = _to_arr(sigma_c, cfg)
     n = cfg.num_payoff_samples
+    suspicion_p = cfg.firm_ai_suspicion_levels[suspicion_idx]
 
     mu = theta + (cfg.ai_signal_boost[theta] if action == 1 else 0.0)
-    p_det = detection_probability(theta, action, firm_policy, cfg)
+    p_det = detection_probability(theta, action, verification, cfg)
     R_m = cfg.reputation_damage()
 
-    s_samples = rng.normal(loc=mu, scale=cfg.signal_sigma, size=n)
-    d_samples = (rng.uniform(size=n) < p_det).astype(int)
+    if shared_noise is None:
+        Z, U_d = _draw_candidate_noise(rng, n)
+    else:
+        Z, U_d = shared_noise
+
+    s_samples = mu + cfg.signal_sigma * Z
+    d_samples = (U_d < p_det).astype(int)
 
     mu_arr = _precompute_mu(cfg)
-    p_det_arr = _precompute_p_det(firm_policy, cfg)
+    p_det_arr = _precompute_p_det(verification, cfg)
 
-    offers = _bayes_optimal_offer_batch(
-        s_samples, d_samples, firm_policy, sigma_c_arr, cfg, mu_arr, p_det_arr
+    offers = _bayes_optimal_offer_under_belief(
+        s_samples, d_samples, verification, suspicion_p, cfg, mu_arr, p_det_arr
     )
     offer_vals = np.array([cfg.offer_value[o] for o in offers])
 
@@ -179,43 +200,70 @@ def candidate_expected_utility(theta, action, firm_policy, sigma_c, cfg, rng=Non
     return float(offer_vals.mean() + effort - det_cost)
 
 
-def firm_expected_utility(firm_policy, sigma_c, cfg, rng=None):
+def _draw_firm_noise(rng, n: int, sigma_c_arr, cfg):
     """
-    E[U_F(m; sigma_c)] via vectorised Monte Carlo.
+    Pre-draw (theta_indices, action_indices, Z_signal, U_det) shared across firm actions.
+    Reused so all (m, k) firm actions are evaluated on the same population sample.
+    """
+    type_probs = np.array([cfg.type_prior[t] for t in cfg.types])
+    theta_indices = rng.choice(len(cfg.types), size=n, p=type_probs)
 
-    U_F = -E[(o*(s,d,m) - theta)^2] - c_m
+    cum = sigma_c_arr[theta_indices].cumsum(axis=1)  # (n, 2)
+    u_a = rng.uniform(size=n)
+    if len(cfg.candidate_actions) != 2:
+        raise ValueError("Firm sampling assumes binary candidate actions")
+    action_indices = (u_a[:, None] >= cum).sum(axis=1).clip(0, 1)
+
+    Z_signal = rng.standard_normal(n)
+    U_det = rng.uniform(size=n)
+    return theta_indices, action_indices, Z_signal, U_det
+
+
+def firm_expected_utility(verification, suspicion_idx, sigma_c, cfg,
+                          rng=None, shared_noise=None):
+    """
+    E[U_F((verification, suspicion_idx); sigma_c)] = -E[(o-theta)^2] - c_m.
+
+    sigma_c may be a dict (theta, a) -> p, or an ndarray (3, 2).
+    `shared_noise`: optional (theta_idx, action_idx, Z_signal, U_det) for paired CRN.
     """
     if rng is None:
         rng = np.random.default_rng(0)
 
     sigma_c_arr = _to_arr(sigma_c, cfg)
     n = cfg.num_payoff_samples
+    suspicion_p = cfg.firm_ai_suspicion_levels[suspicion_idx]
 
-    # Draw types ~ prior
-    type_probs = np.array([cfg.type_prior[t] for t in cfg.types])
-    theta_indices = rng.choice(len(cfg.types), size=n, p=type_probs)
-    thetas = np.array(cfg.types)[theta_indices]  # (n,)
+    if shared_noise is None:
+        theta_indices, action_indices, Z_signal, U_det = _draw_firm_noise(rng, n, sigma_c_arr, cfg)
+    else:
+        theta_indices, action_indices, Z_signal, U_det = shared_noise
 
-    # Draw actions from sigma_c[theta] — vectorised via cumsum trick
-    cum = sigma_c_arr[theta_indices].cumsum(axis=1)  # (n, 2)
-    u_a = rng.uniform(size=n)
-    actions = (u_a[:, None] >= cum).sum(axis=1).clip(0, 1)  # (n,) in {0,1}
+    thetas = np.array(cfg.types)[theta_indices]
 
     mu_arr = _precompute_mu(cfg)
-    p_det_arr = _precompute_p_det(firm_policy, cfg)
+    p_det_arr = _precompute_p_det(verification, cfg)
 
-    # Draw signals and detection in one shot
-    mu_samples = mu_arr[theta_indices, actions]              # (n,)
-    s_samples = rng.normal(loc=mu_samples, scale=cfg.signal_sigma)
-    p_det_samples = p_det_arr[theta_indices, actions]        # (n,)
-    d_samples = (rng.uniform(size=n) < p_det_samples).astype(int)
+    mu_samples = mu_arr[theta_indices, action_indices]
+    s_samples = mu_samples + cfg.signal_sigma * Z_signal
+    p_det_samples = p_det_arr[theta_indices, action_indices]
+    d_samples = (U_det < p_det_samples).astype(int)
 
-    offers = _bayes_optimal_offer_batch(
-        s_samples, d_samples, firm_policy, sigma_c_arr, cfg, mu_arr, p_det_arr
+    offers = _bayes_optimal_offer_under_belief(
+        s_samples, d_samples, verification, suspicion_p, cfg, mu_arr, p_det_arr
     )
     mismatch = (offers - thetas) ** 2
 
-    return float(-mismatch.mean() - cfg.verification_cost[firm_policy])
+    return float(-mismatch.mean() - cfg.verification_cost[verification])
+
+
+def _to_arr(sigma_c, cfg) -> np.ndarray:
+    if isinstance(sigma_c, np.ndarray):
+        return sigma_c
+    return np.array([
+        [sigma_c[(theta, a)] for a in cfg.candidate_actions]
+        for theta in cfg.types
+    ])
 
 
 def _make_crn_rng(seed):
