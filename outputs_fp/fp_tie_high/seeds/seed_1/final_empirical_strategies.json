@@ -1,0 +1,63 @@
+{
+  "sigma_candidate": {
+    "0": {
+      "0": 0.9388297872340425,
+      "1": 0.061170212765957445
+    },
+    "1": {
+      "0": 0.011968085106382979,
+      "1": 0.988031914893617
+    },
+    "2": {
+      "0": 0.026595744680851064,
+      "1": 0.973404255319149
+    }
+  },
+  "sigma_firm_joint": {
+    "LowVerify|sus=0.10": 0.01844532279314888,
+    "LowVerify|sus=0.50": 0.2859025032938076,
+    "LowVerify|sus=0.90": 0.6877470355731226,
+    "BaseVerify|sus=0.10": 0.0013175230566534915,
+    "BaseVerify|sus=0.50": 0.0013175230566534915,
+    "BaseVerify|sus=0.90": 0.0013175230566534915,
+    "HighVerify|sus=0.10": 0.0013175230566534915,
+    "HighVerify|sus=0.50": 0.0013175230566534915,
+    "HighVerify|sus=0.90": 0.0013175230566534915
+  },
+  "counts_candidate": [
+    [
+      706.0,
+      46.0
+    ],
+    [
+      9.0,
+      743.0
+    ],
+    [
+      20.0,
+      732.0
+    ]
+  ],
+  "counts_firm": [
+    14.0,
+    217.0,
+    522.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "firm_joint_action_labels": [
+    "LowVerify|sus=0.10",
+    "LowVerify|sus=0.50",
+    "LowVerify|sus=0.90",
+    "BaseVerify|sus=0.10",
+    "BaseVerify|sus=0.50",
+    "BaseVerify|sus=0.90",
+    "HighVerify|sus=0.10",
+    "HighVerify|sus=0.50",
+    "HighVerify|sus=0.90"
+  ]
+}

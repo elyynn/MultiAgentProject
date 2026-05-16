@@ -1,0 +1,111 @@
+{
+  "regret": {
+    "r_max": 0.0066378283295489586,
+    "r_max_se": 0.0009903772620928775,
+    "r_max_max": 0.010545212765957447,
+    "r_firm": 0.004612779973649536,
+    "r_firm_se": 0.0003506339781997671,
+    "r_firm_max": 0.0055144927536231875,
+    "r_candidate_low": 0.006624541319765649,
+    "r_candidate_low_se": 0.0009942266096284076,
+    "r_candidate_low_max": 0.010545212765957447,
+    "r_candidate_medium": 0.003640092471897538,
+    "r_candidate_medium_se": 0.00021831171346451862,
+    "r_candidate_medium_max": 0.0045056853222325,
+    "r_candidate_high": 0.0041783120287051554,
+    "r_candidate_high_se": 0.0003250672966601179,
+    "r_candidate_high_max": 0.005448574552182173
+  },
+  "convergence": {
+    "is_converged": false,
+    "all_seeds_strategy_stable": false,
+    "r_max_mean_below_threshold": true,
+    "r_max_threshold": 0.01,
+    "max_delta_max": 0.0011869097186960054,
+    "flips_in_window_max": 44,
+    "flips_total_per_seed": [
+      {
+        "candidate_low": 2,
+        "candidate_medium": 1,
+        "candidate_high": 1,
+        "firm": 177
+      },
+      {
+        "candidate_low": 2,
+        "candidate_medium": 1,
+        "candidate_high": 1,
+        "firm": 281
+      },
+      {
+        "candidate_low": 4,
+        "candidate_medium": 1,
+        "candidate_high": 1,
+        "firm": 236
+      },
+      {
+        "candidate_low": 2,
+        "candidate_medium": 1,
+        "candidate_high": 1,
+        "firm": 263
+      },
+      {
+        "candidate_low": 2,
+        "candidate_medium": 1,
+        "candidate_high": 1,
+        "firm": 285
+      }
+    ]
+  },
+  "per_seed": [
+    {
+      "seed": 42,
+      "regret": {
+        "r_max": 0.010545212765957447,
+        "r_firm": 0.005039525691699603,
+        "r_candidate_low": 0.010545212765957447,
+        "r_candidate_medium": 0.0045056853222325,
+        "r_candidate_high": 0.005448574552182173
+      }
+    },
+    {
+      "seed": 43,
+      "regret": {
+        "r_max": 0.0055144927536231875,
+        "r_firm": 0.0055144927536231875,
+        "r_candidate_low": 0.005448057704706642,
+        "r_candidate_medium": 0.0033742588932806905,
+        "r_candidate_high": 0.0037702358926918755
+      }
+    },
+    {
+      "seed": 44,
+      "regret": {
+        "r_max": 0.006032454517422139,
+        "r_firm": 0.0035981554677206873,
+        "r_candidate_low": 0.006032454517422139,
+        "r_candidate_medium": 0.0033556129635859966,
+        "r_candidate_high": 0.003697526841027976
+      }
+    },
+    {
+      "seed": 45,
+      "regret": {
+        "r_max": 0.005131587615283267,
+        "r_firm": 0.004894598155467722,
+        "r_candidate_low": 0.005131587615283267,
+        "r_candidate_medium": 0.0035188693129257764,
+        "r_candidate_high": 0.0038663800353209155
+      }
+    },
+    {
+      "seed": 46,
+      "regret": {
+        "r_max": 0.0059653939954587495,
+        "r_firm": 0.004017127799736481,
+        "r_candidate_low": 0.0059653939954587495,
+        "r_candidate_medium": 0.0034460358674627267,
+        "r_candidate_high": 0.004108842822302838
+      }
+    }
+  ]
+}

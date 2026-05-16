@@ -13,8 +13,8 @@ class SimulationConfig:
     group_size: int = 10
 
     # Time structure
-    rounds_per_epoch: int = 10
-    num_epochs: int = 100
+    rounds_per_epoch: int = 100
+    num_epochs: int = 200
 
     # Candidate type distribution: 0=Low, 1=Medium, 2=High
     type_distribution: Dict[int, float] = None
@@ -35,12 +35,13 @@ class SimulationConfig:
     max_trust: float = 1.0
 
     # Trust update after AI detection
-    direct_trust_penalty: float = 0.60
-    spillover_trust_penalty: float = 0.30
-    num_spillover_companies: int = 2
+    direct_trust_penalty: float = 0.50
+    spillover_trust_penalty: float = 0.20
+    num_spillover_companies: int = 1
 
     # Optional trust recovery if no detection
     trust_recovery_rate: float = 0.01
+
 
     # Firm global trust learning
     firm_global_trust_learning_rate: float = 0.05

@@ -1,0 +1,13 @@
+{
+  "regret": {
+    "r_max": 0.00019643299785586377,
+    "r_firm": 0.00011807289066400467,
+    "r_candidate_low": 0.00019643299785586377,
+    "r_candidate_medium": 0.00010836255606605505,
+    "r_candidate_high": 5.5549792195019876e-05
+  },
+  "convergence": {
+    "is_converged": true,
+    "max_delta": 6.142091136807082e-07
+  }
+}
